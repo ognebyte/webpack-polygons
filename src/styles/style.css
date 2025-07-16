@@ -1,0 +1,16 @@
+* {
+    margin: 0;
+    padding: 0;
+}
+
+.buffer {
+    width: 500px;
+    height: 200px;
+    background-color: bisque;
+}
+
+.workplace {
+    width: 500px;
+    height: 200px;
+    background-color: azure;
+}
