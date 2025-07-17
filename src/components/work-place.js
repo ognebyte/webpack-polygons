@@ -6,14 +6,24 @@ class WorkPlace extends HTMLElement {
         this.startX = this.startY = 0;
         this.offsetX = this.offsetY = 0;
         this.dragDepth = 0;
-        this.rulerSize = 30;
         this.gridSize = 20;
     }
 
     connectedCallback() {
         this.render();
+        this.loadPolygons();
         this.setupEvents();
         this.updateTransform();
+    }
+
+    getTranslateValue(string) {
+        const match = string.match(/translate\(([^,]+),\s*([^)]+)\)/);
+        return match ? [parseFloat(match[1]), parseFloat(match[2])] : [0, 0];
+    }
+
+    getScaleValue(string) {
+        const match = string.match(/scale\(([^)]+)\)/);
+        return match ? parseFloat(match[1]) : 1;
     }
 
     render() {
@@ -40,6 +50,35 @@ class WorkPlace extends HTMLElement {
             </div>
         `;
     }
+
+    loadPolygons = () => {
+        const content = this.querySelector("#workplace-content");
+        if (!content) return;
+
+        const rawData = localStorage.getItem("workplace-data");
+        if (!rawData) return;
+
+        const data = JSON.parse(rawData);
+        content.innerHTML = "";
+
+        if (data.transform) {
+            [this.offsetX, this.offsetY] = this.getTranslateValue(data.transform);
+            this.scale = this.getScaleValue(data.transform);
+        }
+
+        data.polygons.forEach((p) => {
+            const poly = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+            poly.setAttribute("points", p.points);
+            poly.setAttribute("fill", p.fill);
+            poly.setAttribute("transform", p.transform);
+            poly.setAttribute("data-id", p.dataId);
+            poly.setAttribute("stroke", "currentColor");
+            poly.setAttribute("stroke-width", "2");
+            poly.classList.add("draggable");
+
+            content.appendChild(poly);
+        });
+    };
 
     setupEvents() {
         const workplace = this.querySelector(".workplace");
@@ -244,8 +283,7 @@ class WorkPlace extends HTMLElement {
         var dx, dy;
 
         const transform = target.getAttribute("transform") || "";
-        const match = transform.match(/translate\(([^,]+),\s*([^)]+)\)/);
-        let [offsetX, offsetY] = match ? [parseFloat(match[1]), parseFloat(match[2])] : [0, 0];
+        let [offsetX, offsetY] = this.getTranslateValue(transform)
 
         const onMouseMove = (e) => {
             dx = offsetX + (e.clientX - startX) / this.scale;
