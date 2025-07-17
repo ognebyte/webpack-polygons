@@ -1,0 +1,106 @@
+work-place {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    display: block;
+    user-select: none;
+}
+
+.rulers-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.ruler {
+    position: absolute;
+    background: var(--ruler-background-color);
+    font-size: 12px;
+    font-family: "Segoe UI", sans-serif;
+    color: var(--secondary-text-color);
+}
+
+.ruler-corner {
+    top: 0;
+    left: 0;
+    width: var(--ruler-size);
+    height: var(--ruler-size);
+    background: var(--background-color);
+}
+
+.ruler-x {
+    top: 0;
+    left: var(--ruler-size);
+    right: 0;
+    height: var(--ruler-size);
+    overflow: hidden;
+}
+
+.ruler-y {
+    top: var(--ruler-size);
+    left: 0;
+    width: var(--ruler-size);
+    bottom: 0;
+    overflow: hidden;
+}
+
+.workplace {
+    position: absolute;
+    top: var(--ruler-size);
+    left: var(--ruler-size);
+    right: 0;
+    bottom: 0;
+    background-color: var(--background-color);
+    overflow: hidden;
+}
+
+.grid-pattern {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    color: var(--grid-color);
+    pointer-events: none;
+}
+
+.content-svg {
+    position: relative;
+}
+
+.ruler-tick {
+    position: absolute;
+    background: var(--grid-color);
+}
+
+.ruler-tick-x {
+    width: 1px;
+    height: var(--tick-size);
+    top: var(--tick-spacing);
+}
+
+.ruler-tick-y {
+    width: var(--tick-size);
+    height: 1px;
+    left: var(--tick-spacing);
+}
+
+.ruler-label {
+    position: absolute;
+}
+
+.ruler-label-x {
+    top: 2px;
+    margin-left: 3px;
+}
+
+.ruler-label-y {
+    left: 2px;
+    margin-bottom: 3px;
+    transform: rotate(-90deg);
+    transform-origin: left top;
+}

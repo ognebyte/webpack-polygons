@@ -1,5 +1,15 @@
 :root {
+    --primary-text-color: rgb(34, 34, 34);
+    --secondary-text-color: rgba(204, 204, 204, 0.5);
+    --button-color: rgb(187, 187, 187);
     --background-color: rgb(56, 56, 56);
+    --outline-color: rgb(0, 204, 255);
+    --grid-color: rgba(233, 233, 233, 0.5);
+    --ruler-background-color: rgb(78, 78, 78);
+
+    --ruler-size: 24px;
+    --tick-size: calc(var(--ruler-size) / 3);
+    --tick-spacing: calc(var(--tick-size) * 2);
 }
 
 * {
@@ -13,14 +23,26 @@ body {
     flex-direction: column;
     width: 100%;
     height: 100vh;
-    gap: 16px;
+    gap: 2px;
 }
 
 header {
     display: inline-flex;
-    padding: 8px;
-    gap: 8px;
+    padding: 8px 16px;
+    gap: 16px;
     background-color: var(--background-color);
+
+    button {
+        padding: 8px 12px;
+        background-color: var(--button-color);
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    button:hover {
+        opacity: 0.6;
+    }
 
     #save-polygons {
         margin-left: auto;
@@ -34,11 +56,12 @@ main {
     gap: inherit;
 }
 
-.buffer, work-place {
+.buffer {
     width: 100%;
     background-color: var(--background-color);
-    overflow: hidden;
     user-select: none;
+    transition: 0.2s ease;
+    transition-property: filter;
 }
 
 .buffer {
@@ -47,11 +70,9 @@ main {
     align-content: flex-start;
     align-items: center;
     height: 30%;
+    padding: 8px 16px;
     resize: vertical;
-}
-
-work-place {
-    flex: 1;
+    overflow: auto;
 }
 
 polygon-item {
@@ -59,14 +80,9 @@ polygon-item {
     background-color: transparent;
 }
 
-#ruler-x text {
-  text-anchor: middle;
-  dominant-baseline: hanging;
-}
-
-#ruler-y text {
-  text-anchor: middle;
-  writing-mode: vertical-lr;
+.dragenter {
+    cursor: copy;
+    filter: brightness(0.6);
 }
 
 .draggable {
@@ -75,7 +91,7 @@ polygon-item {
 }
 
 .draggable:hover {
-    color: aqua;
+    color: var(--outline-color);
 }
 
 .draggable:active {

@@ -3,188 +3,253 @@ class WorkPlace extends HTMLElement {
         super();
         this.scale = 1;
         this.isDragging = false;
-        this.startX, this.startY;
-        this.offsetX = 0;
-        this.offsetY = 0;
+        this.startX = this.startY = 0;
+        this.offsetX = this.offsetY = 0;
+        this.dragDepth = 0;
+        this.rulerSize = 30;
+        this.gridSize = 20;
     }
 
     connectedCallback() {
         this.render();
         this.setupEvents();
-        this.updateRulers();
+        this.updateTransform();
     }
 
     render() {
-        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        svg.setAttribute("width", "100%");
-        svg.setAttribute("height", "100%");
-
-        const content = document.createElementNS("http://www.w3.org/2000/svg", "g");
-        content.id = "workplace-content";
-
-        const rulerX = document.createElementNS("http://www.w3.org/2000/svg", "g");
-        rulerX.id = "ruler-x";
-
-        const rulerY = document.createElementNS("http://www.w3.org/2000/svg", "g");
-        rulerY.id = "ruler-y";
-
-        svg.append(content, rulerX, rulerY);
-        this.appendChild(svg);
+        this.innerHTML = `
+            <div class="rulers-container">
+                <div class="ruler ruler-corner"></div>
+                <div class="ruler ruler-x"></div>
+                <div class="ruler ruler-y"></div>
+            </div>
+            
+            <div class="workplace">
+                <svg class="grid-pattern" width="100%" height="100%">
+                    <defs>
+                        <pattern id="grid" width="${this.gridSize}" height="${this.gridSize}" patternUnits="userSpaceOnUse">
+                            <path d="M ${this.gridSize} 0 L 0 0 0 ${this.gridSize}" fill="none" stroke="currentColor" stroke-width="1"/>
+                        </pattern>
+                    </defs>
+                    <rect width="100%" height="100%" fill="url(#grid)" />
+                </svg>
+                
+                <svg class="content-svg" width="100%" height="100%">
+                    <g id="workplace-content"></g>
+                </svg>
+            </div>
+        `;
     }
 
     setupEvents() {
-        this.addEventListener("dragover", (e) => {
-            e.preventDefault();
+        const workplace = this.querySelector(".workplace");
+
+        workplace.addEventListener("dragenter", () => {
+            if (this.dragDepth++ === 0) this.classList.add("dragenter");
         });
 
-        this.addEventListener("drop", (e) => {
-            e.preventDefault();
-            const id = e.dataTransfer.getData("text/plain");
-            const draggedSvg = document.getElementById(id);
-            const polygon = draggedSvg.querySelector("polygon");
-            draggedSvg.remove();
+        workplace.addEventListener("dragover", (e) => e.preventDefault());
 
-            if (polygon) {
-                const newPolygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
-
-                for (let attr of polygon.attributes) {
-                    newPolygon.setAttribute(attr.name, attr.value);
-                }
-
-                newPolygon.setAttribute("data-id", id);
-                newPolygon.setAttribute("draggable", "true");
-
-                let rect = this.getBoundingClientRect();
-                let x = e.clientX - rect.x;
-                let y = e.clientY - rect.y;
-
-                newPolygon.setAttribute("transform", `translate(${x},${y})`);
-                newPolygon.classList.add("draggable");
-
-                const content = this.querySelector("#workplace-content");
-                content.appendChild(newPolygon);
+        workplace.addEventListener("dragleave", () => {
+            if (--this.dragDepth <= 0) {
+                this.dragDepth = 0;
+                this.classList.remove("dragenter");
             }
         });
 
-        this.addEventListener(
+        workplace.addEventListener("drop", (e) => {
+            e.preventDefault();
+            this.dragDepth = 0;
+            this.classList.remove("dragenter");
+
+            const id = e.dataTransfer.getData("text/plain");
+            const draggedSvg = document.getElementById(id);
+            const polygon = draggedSvg?.querySelector("polygon");
+
+            if (!polygon) return;
+
+            draggedSvg.remove();
+
+            const newPolygon = this.createSVGElement("polygon");
+            [...polygon.attributes].forEach((attr) => newPolygon.setAttribute(attr.name, attr.value));
+
+            const rect = workplace.getBoundingClientRect();
+            const x = (e.clientX - rect.x - this.offsetX) / this.scale;
+            const y = (e.clientY - rect.y - this.offsetY) / this.scale;
+
+            newPolygon.dataset.id = id;
+            newPolygon.classList.add("draggable");
+            newPolygon.setAttribute("transform", `translate(${x},${y})`);
+
+            this.querySelector("#workplace-content").appendChild(newPolygon);
+        });
+
+        workplace.addEventListener(
             "wheel",
             (e) => {
                 e.preventDefault();
-                const delta = -e.deltaY * 0.001;
-                this.scale += delta;
-                this.scale = Math.min(Math.max(0.2, this.scale), 5);
+                const rect = workplace.getBoundingClientRect();
+                const mouseX = e.clientX - rect.x;
+                const mouseY = e.clientY - rect.y;
+
+                const worldX = (mouseX - this.offsetX) / this.scale;
+                const worldY = (mouseY - this.offsetY) / this.scale;
+
+                this.scale = Math.min(Math.max(0.2, this.scale - e.deltaY * 0.001), 10);
+
+                this.offsetX = mouseX - worldX * this.scale;
+                this.offsetY = mouseY - worldY * this.scale;
+
                 this.updateTransform();
             },
             { passive: false }
         );
 
-        this.addEventListener("mousedown", (e) => {
-            if (e.button !== 0) return;
-            if (e.target.tagName == "polygon") {
+        workplace.addEventListener("mousedown", (e) => {
+            if (e.target.tagName === "polygon") {
                 this.movePolygon(e);
-                return;
+            } else {
+                this.isDragging = true;
+                [this.startX, this.startY] = [e.clientX, e.clientY];
             }
-            this.isDragging = true;
-            this.startX = e.clientX;
-            this.startY = e.clientY;
         });
 
         window.addEventListener("mousemove", (e) => {
             if (!this.isDragging) return;
-            const dx = e.clientX - this.startX;
-            const dy = e.clientY - this.startY;
-            this.offsetX += dx;
-            this.offsetY += dy;
-            this.startX = e.clientX;
-            this.startY = e.clientY;
+            this.offsetX += e.clientX - this.startX;
+            this.offsetY += e.clientY - this.startY;
+            [this.startX, this.startY] = [e.clientX, e.clientY];
             this.updateTransform();
         });
 
-        window.addEventListener("mouseup", () => {
-            this.isDragging = false;
-        });
+        window.addEventListener("mouseup", () => (this.isDragging = false));
+        window.addEventListener("resize", () => this.updateTransform());
+    }
+
+    createSVGElement(tag, attrs = {}) {
+        const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
+        Object.entries(attrs).forEach(([key, value]) => el.setAttribute(key, value));
+        return el;
     }
 
     updateTransform() {
-        const transformStr = `translate(${this.offsetX},${this.offsetY}) scale(${this.scale})`;
-        const workplaceContent = this.querySelector("#workplace-content");
-        workplaceContent.setAttribute("transform", transformStr);
+        this.querySelector("#workplace-content").setAttribute("transform", `translate(${this.offsetX},${this.offsetY}) scale(${this.scale})`);
 
+        this.updateGrid();
         this.updateRulers();
     }
 
+    updateGrid() {
+        const gridPattern = this.querySelector("#grid");
+        if (!gridPattern) return;
+
+        var scaledGridSize = this.gridSize * this.scale;
+        scaledGridSize *= this.scale >= 0.5 ? 2.5 : 5;
+        const offsetX = this.offsetX % scaledGridSize;
+        const offsetY = this.offsetY % scaledGridSize;
+
+        gridPattern.setAttribute("width", scaledGridSize);
+        gridPattern.setAttribute("height", scaledGridSize);
+        gridPattern.setAttribute("x", offsetX);
+        gridPattern.setAttribute("y", offsetY);
+
+        const path = gridPattern.querySelector("path");
+        path.setAttribute("d", `M ${scaledGridSize} 0 L 0 0 0 ${scaledGridSize}`);
+    }
+
     updateRulers() {
-        const rulerX = this.querySelector("#ruler-x");
-        const rulerY = this.querySelector("#ruler-y");
+        const rulerX = this.querySelector(".ruler-x");
+        const rulerY = this.querySelector(".ruler-y");
 
-        rulerX.innerHTML = "";
-        rulerY.innerHTML = "";
+        if (!rulerX || !rulerY) return;
 
-        const svg = this.querySelector("svg");
-        const width = svg.clientWidth;
-        const height = svg.clientHeight;
-        const step = 100;
+        const workplace = this.querySelector(".workplace");
+        const { width, height } = workplace.getBoundingClientRect();
 
-        for (let x = step; x < width; x += step) {
-            const realX = (x - this.offsetX) / this.scale;
+        this.updateRulerX(rulerX, width);
+        this.updateRulerY(rulerY, height);
+    }
 
-            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-            line.setAttribute("x1", x);
-            line.setAttribute("x2", x);
-            line.setAttribute("y1", 18);
-            line.setAttribute("y2", 24);
-            line.setAttribute("stroke", "#aaa");
-            rulerX.appendChild(line);
+    updateRulerX(ruler, width) {
+        const step = this.getOptimalStep();
+        const scaledStep = step * this.scale;
 
-            const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-            text.setAttribute("x", x);
-            text.setAttribute("y", 4);
-            text.setAttribute("font-size", "14");
-            text.setAttribute("fill", "#999");
-            text.textContent = Math.round(realX);
-            rulerX.appendChild(text);
+        const startWorld = -this.offsetX / this.scale;
+        const startStep = Math.floor(startWorld / step) * step;
+
+        ruler.innerHTML = "";
+
+        for (let world = startStep; world * this.scale + this.offsetX < width + scaledStep; world += step) {
+            const screenX = world * this.scale + this.offsetX;
+
+            if (screenX >= -scaledStep && screenX <= width + scaledStep) {
+                const tick = document.createElement("div");
+                tick.className = "ruler-tick ruler-tick-x";
+                tick.style.left = `${screenX}px`;
+
+                const label = document.createElement("div");
+                label.className = "ruler-label ruler-label-x";
+                label.style.left = `${screenX}px`;
+                label.textContent = Math.round(world);
+
+                ruler.appendChild(tick);
+                ruler.appendChild(label);
+            }
         }
+    }
 
-        for (let y = step; y < height; y += step) {
-            const realY = (y - this.offsetY) / this.scale;
+    updateRulerY(ruler, height) {
+        const step = this.getOptimalStep();
+        const scaledStep = step * this.scale;
 
-            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-            line.setAttribute("x1", 18);
-            line.setAttribute("x2", 24);
-            line.setAttribute("y1", y);
-            line.setAttribute("y2", y);
-            line.setAttribute("stroke", "#aaa");
-            rulerY.appendChild(line);
+        const startWorld = -this.offsetY / this.scale;
+        const startStep = Math.floor(startWorld / step) * step;
 
-            const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-            text.setAttribute("x", 8);
-            text.setAttribute("y", y);
-            text.setAttribute("font-size", "14");
-            text.setAttribute("fill", "#999");
-            text.textContent = Math.round(realY);
-            rulerY.appendChild(text);
+        ruler.innerHTML = "";
+
+        for (let world = startStep; world * this.scale + this.offsetY < height + scaledStep; world += step) {
+            const screenY = world * this.scale + this.offsetY;
+
+            if (screenY >= -scaledStep && screenY <= height + scaledStep) {
+                const tick = document.createElement("div");
+                tick.className = "ruler-tick ruler-tick-y";
+                tick.style.top = `${screenY}px`;
+
+                const label = document.createElement("div");
+                label.className = "ruler-label ruler-label-y";
+                label.style.top = `${screenY}px`;
+                label.textContent = Math.round(world);
+
+                ruler.appendChild(tick);
+                ruler.appendChild(label);
+            }
         }
+    }
+
+    getOptimalStep() {
+        const baseStep = 50;
+        const scaledStep = baseStep * this.scale;
+
+        if (scaledStep > 50) return baseStep;
+        if (scaledStep > 25) return baseStep * 2;
+        if (scaledStep > 10) return baseStep * 4;
+        return baseStep * 8;
     }
 
     movePolygon(e) {
         const target = e.target;
-        let startX = e.clientX;
-        let startY = e.clientY;
-        let offsetX = 0, offsetY = 0;
+        const workplace = this.querySelector(".workplace");
+        const wrapper = workplace.getBoundingClientRect();
+        const [startX, startY] = [e.clientX, e.clientY];
+        var dx, dy;
 
-        const origTransform = target.getAttribute("transform") || "";
-        if (origTransform) {
-            const match = origTransform.match(/translate\(([^,]+),\s*([^)]+)\)/);
+        const transform = target.getAttribute("transform") || "";
+        const match = transform.match(/translate\(([^,]+),\s*([^)]+)\)/);
+        let [offsetX, offsetY] = match ? [parseFloat(match[1]), parseFloat(match[2])] : [0, 0];
 
-            if (match) {
-                offsetX = parseFloat(match[1]);
-                offsetY = parseFloat(match[2]);
-            }
-        }
-
-        const onMouseMove = (polyE) => {
-            const dx = offsetX + (polyE.clientX - startX) / this.scale;
-            const dy = offsetY + (polyE.clientY - startY) / this.scale;
+        const onMouseMove = (e) => {
+            dx = offsetX + (e.clientX - startX) / this.scale;
+            dy = e.clientY < wrapper.y ? dy : offsetY + (e.clientY - startY) / this.scale;
             target.setAttribute("transform", `translate(${dx},${dy})`);
         };
 

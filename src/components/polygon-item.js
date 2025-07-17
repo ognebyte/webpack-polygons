@@ -1,59 +1,112 @@
 class PolygonItem extends HTMLElement {
     connectedCallback() {
-        this.render();
+        const polygon = this.querySelector("polygon");
+
+        if (polygon && !this.querySelector("svg")) {
+            this.measurePolygon(polygon).then((bbox) => this.wrapInSvg(polygon, bbox));
+        } else if (!polygon) {
+            this.render();
+        } else {
+            this.setup();
+        }
+    }
+
+    async measurePolygon(polygonElement) {
+        const tempSvg = this.createSVGElement("svg", {
+            width: "0",
+            height: "0",
+            style: "position:absolute;opacity:0;pointer-events:none;z-index:-1",
+        });
+
+        tempSvg.appendChild(polygonElement.cloneNode(true));
+        document.body.appendChild(tempSvg);
+
+        return new Promise((resolve) => {
+            requestAnimationFrame(() => {
+                const bbox = tempSvg.firstChild.getBBox();
+                tempSvg.remove();
+                resolve(bbox);
+            });
+        });
+    }
+
+    createSVGElement(tag, attrs = {}) {
+        const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
+        Object.entries(attrs).forEach(([key, value]) => {
+            if (key === "style") {
+                el.style.cssText = value;
+            } else {
+                el.setAttribute(key, value);
+            }
+        });
+        return el;
+    }
+
+    wrapInSvg(polygon, bbox) {
+        const svg = this.createSVGElement("svg", {
+            width: bbox.width + 10,
+            height: bbox.height + 10,
+            viewBox: `${bbox.x - 5} ${bbox.y - 5} ${bbox.width + 10} ${bbox.height + 10}`,
+        });
+
+        polygon.remove();
+        svg.appendChild(polygon);
+        this.appendChild(svg);
+        this.setup();
+    }
+
+    setup() {
+        this.id ||= `polygon-${crypto.randomUUID()}`;
+        this.draggable = true;
+        this.classList.add("draggable");
+        this.addEventListener("dragstart", (e) => e.dataTransfer.setData("text/plain", this.id));
     }
 
     render() {
         const { points, bbox } = this.generatePolygon();
+        this.id = `polygon-${crypto.randomUUID()}`;
 
-        const polygonId = `polygon-${crypto.randomUUID()}`; // генерируем уникальный id
-        this.id = polygonId;
-        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        svg.setAttribute("width", bbox.width + 10);
-        svg.setAttribute("height", bbox.height + 10);
-        svg.setAttribute("viewBox", `${bbox.minX - 5} ${bbox.minY - 5} ${bbox.width + 10} ${bbox.height + 10}`);
+        const svg = this.createSVGElement("svg", {
+            width: bbox.width + 10,
+            height: bbox.height + 10,
+            viewBox: `${bbox.minX - 5} ${bbox.minY - 5} ${bbox.width + 10} ${bbox.height + 10}`,
+        });
 
-        const polygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
-        polygon.setAttribute("points", points.map((p) => `${p.x},${p.y}`).join(" "));
-        polygon.setAttribute("fill", randomColor());
-        polygon.setAttribute("stroke", "currentColor");
-        polygon.setAttribute("stroke-width", "2");
+        const polygon = this.createSVGElement("polygon", {
+            points: points.map((p) => `${p.x},${p.y}`).join(" "),
+            fill: randomColor(),
+            stroke: "currentColor",
+            "stroke-width": "2",
+        });
 
         svg.appendChild(polygon);
         this.appendChild(svg);
-
-        this.draggable = true;
-        this.classList.add('draggable');
-        this.addEventListener("dragstart", this.onDragStart);
+        this.setup();
     }
 
     generatePolygon() {
-        const vertexCount = getRandomInt(4, 8);
-        const radius = getRandomInt(40, 80);
-        const cx = 0;
-        const cy = 0;
+        const vertexCount = this.getRandomInt(4, 8);
+        const radius = this.getRandomInt(40, 80);
         const points = [];
 
         for (let i = 0; i < vertexCount; i++) {
             const angle = ((Math.PI * 2) / vertexCount) * i + Math.random() * 0.5;
             const r = radius * (0.2 + Math.random());
-            const x = cx + r * Math.cos(angle);
-            const y = cy + r * Math.sin(angle);
-            points.push({ x, y });
+            points.push({
+                x: r * Math.cos(angle),
+                y: r * Math.sin(angle),
+            });
         }
 
-        const bbox = this.getBoundingBox(points);
-
-        return { points, bbox };
+        return { points, bbox: this.getBoundingBox(points) };
     }
 
     getBoundingBox(points) {
         const xs = points.map((p) => p.x);
         const ys = points.map((p) => p.y);
-        const minX = Math.min(...xs);
-        const minY = Math.min(...ys);
-        const maxX = Math.max(...xs);
-        const maxY = Math.max(...ys);
+        const [minX, minY] = [Math.min(...xs), Math.min(...ys)];
+        const [maxX, maxY] = [Math.max(...xs), Math.max(...ys)];
+
         return {
             minX,
             minY,
@@ -62,8 +115,8 @@ class PolygonItem extends HTMLElement {
         };
     }
 
-    onDragStart(e) {
-        e.dataTransfer.setData("text/plain", this.id);
+    getRandomInt(min, max) {
+        return Math.floor(Math.random() * (max - min + 1)) + min;
     }
 }
 
