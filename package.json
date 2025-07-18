@@ -2,8 +2,9 @@
     "name": "webpack-polygons",
     "version": "1.0.0",
     "main": "index.js",
+    "homepage": "https://ognebyte.github.io/webpack-polygons",
     "scripts": {
-        "start": "webpack serve --mode development",
+        "start": "webpack serve --mode production",
         "build": "webpack --mode production"
     },
     "keywords": [],
