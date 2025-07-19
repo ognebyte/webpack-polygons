@@ -30,36 +30,40 @@ body {
 
 header {
     display: inline-flex;
-    padding: 8px 16px;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    padding: 12px 16px;
     gap: 16px;
     background-color: var(--background-color);
 
-    button {
-        padding: 8px 12px;
-        background-color: var(--button-color);
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        transition: 0.2s ease opacity;
+    .left, .right {
+        display: flex;
+        gap: 12px;
     }
+}
 
-    button:hover {
-        opacity: 0.6;
-    }
 
-    button:active {
-        opacity: 0.4;
-    }
+.button {
+    padding: 8px 12px;
+    background-color: var(--button-color);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: 0.2s ease opacity;
+}
 
-    button.success {
-        background-color: var(--success-background-color);
-        color: var(--success-text-color);
-        opacity: 1;
-    }
+.button:hover {
+    opacity: 0.6;
+}
 
-    #save-polygons {
-        margin-left: auto;
-    }
+.button:active {
+    opacity: 0.4;
+}
+
+.button.success {
+    background-color: var(--success-background-color);
+    color: var(--success-text-color);
+    opacity: 1;
 }
 
 main {

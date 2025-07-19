@@ -87,7 +87,7 @@ class WorkPlace extends HTMLElement {
             if (this.dragDepth++ === 0) this.classList.add("dragenter");
         });
 
-        workplace.addEventListener("dragover", (e) => e.preventDefault());
+        workplace.addEventListener("dragover", (e) => e.preventDefault(), { passive: false });
 
         workplace.addEventListener("dragleave", () => {
             if (--this.dragDepth <= 0) {
@@ -96,32 +96,36 @@ class WorkPlace extends HTMLElement {
             }
         });
 
-        workplace.addEventListener("drop", (e) => {
-            e.preventDefault();
-            this.dragDepth = 0;
-            this.classList.remove("dragenter");
+        workplace.addEventListener(
+            "drop",
+            (e) => {
+                e.preventDefault();
+                this.dragDepth = 0;
+                this.classList.remove("dragenter");
 
-            const id = e.dataTransfer.getData("text/plain");
-            const draggedSvg = document.getElementById(id);
-            const polygon = draggedSvg?.querySelector("polygon");
+                const id = e.dataTransfer.getData("text/plain");
+                const draggedSvg = document.getElementById(id);
+                const polygon = draggedSvg?.querySelector("polygon");
 
-            if (!polygon) return;
+                if (!polygon) return;
 
-            draggedSvg.remove();
+                draggedSvg.remove();
 
-            const newPolygon = this.createSVGElement("polygon");
-            [...polygon.attributes].forEach((attr) => newPolygon.setAttribute(attr.name, attr.value));
+                const newPolygon = this.createSVGElement("polygon");
+                [...polygon.attributes].forEach((attr) => newPolygon.setAttribute(attr.name, attr.value));
 
-            const rect = workplace.getBoundingClientRect();
-            const x = (e.clientX - rect.x - this.offsetX) / this.scale;
-            const y = (e.clientY - rect.y - this.offsetY) / this.scale;
+                const rect = workplace.getBoundingClientRect();
+                const x = (e.clientX - rect.x - this.offsetX) / this.scale;
+                const y = (e.clientY - rect.y - this.offsetY) / this.scale;
 
-            newPolygon.dataset.id = id;
-            newPolygon.classList.add("draggable");
-            newPolygon.setAttribute("transform", `translate(${x},${y})`);
+                newPolygon.dataset.id = id;
+                newPolygon.classList.add("draggable");
+                newPolygon.setAttribute("transform", `translate(${x},${y})`);
 
-            this.querySelector("#workplace-content").appendChild(newPolygon);
-        });
+                this.querySelector("#workplace-content").appendChild(newPolygon);
+            },
+            { passive: false }
+        );
 
         workplace.addEventListener(
             "wheel",
@@ -257,7 +261,7 @@ class WorkPlace extends HTMLElement {
                 const label = document.createElement("div");
                 label.className = "ruler-label ruler-label-y";
                 label.style.top = `${screenY}px`;
-                label.textContent = Math.round(world);
+                label.textContent = Math.round(-world);
 
                 ruler.appendChild(tick);
                 ruler.appendChild(label);
@@ -283,7 +287,7 @@ class WorkPlace extends HTMLElement {
         var dx, dy;
 
         const transform = target.getAttribute("transform") || "";
-        let [offsetX, offsetY] = this.getTranslateValue(transform)
+        let [offsetX, offsetY] = this.getTranslateValue(transform);
 
         const onMouseMove = (e) => {
             dx = offsetX + (e.clientX - startX) / this.scale;

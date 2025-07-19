@@ -74,7 +74,7 @@ class PolygonItem extends HTMLElement {
 
         const polygon = this.createSVGElement("polygon", {
             points: points.map((p) => `${p.x},${p.y}`).join(" "),
-            fill: randomColor(),
+            fill: "rgb(145 0 35)",
             stroke: "currentColor",
             "stroke-width": "2",
         });
@@ -85,8 +85,8 @@ class PolygonItem extends HTMLElement {
     }
 
     generatePolygon() {
-        const vertexCount = this.getRandomInt(4, 8);
-        const radius = this.getRandomInt(40, 80);
+        const vertexCount = getRandomInt(3, 10);
+        const radius = getRandomInt(40, 80);
         const points = [];
 
         for (let i = 0; i < vertexCount; i++) {
@@ -113,10 +113,6 @@ class PolygonItem extends HTMLElement {
             width: maxX - minX,
             height: maxY - minY,
         };
-    }
-
-    getRandomInt(min, max) {
-        return Math.floor(Math.random() * (max - min + 1)) + min;
     }
 }
 

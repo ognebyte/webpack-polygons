@@ -12,13 +12,6 @@ window.getRandomInt = (min, max) => {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 };
 
-window.randomColor = () => {
-    const hue = Math.floor(Math.random() * 360);
-    const saturation = 40 + Math.random() * 20;
-    const lightness = 60 + Math.random() * 15;
-    return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-};
-
 var isDragging, polygonId;
 
 window.addEventListener("mousedown", (e) => {
